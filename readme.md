@@ -2,7 +2,7 @@
 # Live Camera feed
 Broadcast a live camera feed and pick it up from a computer that can run the client.py file & must be connected to the same LAN network.
 
-The transmission latency is better than my previous HTTP streaming project
+Run the server.py file on a NICLA Vision arduino board
 
 &nbsp;
 

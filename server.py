@@ -1,52 +1,64 @@
-# Brian Joseph Lesko        2/1/24      Robotics Automation Engineer III
-# Create a LAN server that hosts a live data feed generated from the host machine 
-
-import numpy as np
-import cv2 # pip install opencv-python-headless
+import pyb
+led = pyb.LED(3)
+usb = pyb.USB_VCP()
+import sensor
+import time
+clock = time.clock()
+import image
+import network
 import socket
-import pickle
 
-camera = cv2.VideoCapture(0) # on a mac you can use either your mac webcam or an iphone camera using continuity camera! for me, my iphone was (1) and my mac webcam was (0) 
-# Limit the size and FPS to increase speed
-camera.set(cv2.CAP_PROP_FPS, 24) # FPS
-camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG')) # compression method
+SSID = "BL_phone"  # Network SSID
+KEY = "***"  # Network key
+HOST = "172.20.10.4"  # Use first available interface
+PORT = 8000  # Arbitrary non-privileged port
 
-def get_frame(): 
-    global camera
-    try: 
-        _, frame = camera.read()
-        #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        frame = cv2.flip(frame, 1)  # this line flips the image
-        return frame
-    except:
-        return np.zeros((300, 300, 3))
+# Init wlan module and connect to network
+wlan = network.WLAN(network.STA_IF)
+wlan.active(True)
+wlan.ifconfig(('172.20.10.4', '255.255.255.240', '172.20.10.1', '172.20.10.1'))
+wlan.connect(SSID, KEY)
 
-def main():
-    #st.set_page_config(layout="wide")
-    #st.title("Live Camera Feed")
+while not wlan.isconnected():
+    print('Trying to connect to "{:s}"...'.format(SSID))
+    time.sleep_ms(1000)
 
-    # UDP socket
-    server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-    host_name = socket.gethostname()
-    host_ip = socket.gethostbyname(host_name)
-    print('Host:', host_ip)
-    server.bind((host_ip, 8000))  # Bind the socket to a specific address
+# We should have a valid IP now via DHCP
+print("WiFi Connected ", wlan.ifconfig())
 
-    client_address = ('127.0.0.1', 8001)  # Replace with the client's IP address and port
+# Create a UDP server socket
+server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+#server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+server.bind((HOST, PORT))  # Bind the socket to a specific address
 
+# Send to this client
+client_address = ('172.20.10.2', 8000)
+
+# Init sensor
+sensor.reset()
+sensor.set_framesize(sensor.QVGA)
+sensor.set_pixformat(sensor.RGB565)
+
+def start_streaming(server,client_address):
     while True:
-        frame = get_frame()
-        #data = pickle.dumps(frame)
-        data = cv2.imencode('.jpg', frame)[1].tobytes()
+            clock.tick()  # Track elapsed milliseconds between snapshots().
+            frame = sensor.snapshot()
+            data = frame.compressed(quality=35).bytearray()
+           
+            # Split the data into chunks
+            chunk_size = 250  # Maximum UDP packet size
+            for i in range(0, len(data), chunk_size):
+                chunk = data[i:i+chunk_size]
+                server.sendto(chunk, client_address)
+            #print("frame sent", len(data))
+            server.sendto(b'END', client_address)  # send an empty chunk to signal the end of the frame
+            print(clock.fps())
 
-        # Split the data into chunks
-        chunk_size = 500  # Maximum UDP packet size
-        for i in range(0, len(data), chunk_size):
-            chunk = data[i:i+chunk_size]
-            server.sendto(chunk, client_address)
-        #print("frame sent", len(data))
-        server.sendto(b'END', client_address)  # send an empty chunk to signal the end of the frame
-        
-main() 
+
+while True:
+    try:
+        start_streaming(server,client_address)
+    except OSError as e:
+        print("socket error: ", e)
+        # sys.print_exception(e)
+
