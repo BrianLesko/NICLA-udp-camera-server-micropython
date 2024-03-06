@@ -10,10 +10,7 @@ Run the server.py file on a NICLA Vision arduino board
 
 ## Dependencies
 
-This code uses the following libraries:
-- `streamlit`: for building the user interface and HTML web app 
-- `openCV`: for handling the image capture
-- `numpy`: for creating efficient arrays
+Nicla vision arduino board
 
 &nbsp;
 &nbsp;
