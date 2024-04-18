@@ -4,6 +4,8 @@ Broadcast a live camera feed and pick it up from a computer that can run the cli
 
 Run the server.py file on a NICLA Vision arduino board
 
+This UDP camera server repository achieved an average frame rate of 18.7 fps with a lower latency than the TCP camera server, which achieved an average framerate around 16 fps.
+
 &nbsp;
 
 &nbsp;

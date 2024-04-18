@@ -40,18 +40,21 @@ sensor.set_framesize(sensor.QVGA)
 sensor.set_pixformat(sensor.RGB565)
 
 def start_streaming(server,client_address):
+    header = b'CAM'  
+    delimiter = b'END' 
     while True:
             clock.tick()  # Track elapsed milliseconds between snapshots().
             frame = sensor.snapshot()
-            data = frame.compressed(quality=35).bytearray()
+            data = frame.compressed(quality=50).bytearray()
            
             # Split the data into chunks
             chunk_size = 250  # Maximum UDP packet size
+            server.sendto(header, client_address)
             for i in range(0, len(data), chunk_size):
                 chunk = data[i:i+chunk_size]
                 server.sendto(chunk, client_address)
             #print("frame sent", len(data))
-            server.sendto(b'END', client_address)  # send an empty chunk to signal the end of the frame
+            server.sendto(delimiter, client_address)  # send an empty chunk to signal the end of the frame
             print(clock.fps())
 
 
