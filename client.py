@@ -23,12 +23,9 @@ print('Client is listening at', client_address)
 def display():
     data = b''  # initialize the data variable
     while True:
-        with st.spinner('Waiting for the next chunk...'):
-            chunk, addr = client.recvfrom(900000000)
-        if chunk == b'CAM':
-            data = b''
-        elif chunk == b'END':  # check for the "END" delimiter
-            chunk, addr = client.recvfrom(900000000)
+        #with st.spinner('Waiting for the next chunk...'):
+        chunk, addr = client.recvfrom(900000000)
+        if chunk == b'END':  # check for the "END" delimiter
             try: 
                 # print the length of the data
                 frame = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
