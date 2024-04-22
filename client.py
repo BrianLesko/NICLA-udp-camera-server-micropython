@@ -11,7 +11,6 @@ gui = gui.gui()
 gui.setup(wide=True,text="Receive a video stream from a Nicla Vision UDP camera server.")
 st.title("UDP Camera Client")
 image_spot = st.empty()
-Chunk = st.empty()
 
 # Create a UDP socket
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -21,22 +20,35 @@ client_address = ('172.20.10.2', 8000)  # Replace with the client's IP address a
 client.bind(client_address)
 print('Client is listening at', client_address)
 
-data = b''  # initialize the data variable
+def display():
+    data = b''  # initialize the data variable
+    while True:
+        with st.spinner('Waiting for the next chunk...'):
+            chunk, addr = client.recvfrom(900000000)
+        if chunk == b'CAM':
+            data = b''
+        elif chunk == b'END':  # check for the "END" delimiter
+            chunk, addr = client.recvfrom(900000000)
+            try: 
+                # print the length of the data
+                frame = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+                # show the image
+                with image_spot:
+                    st.image(frame, channels="BGR", width=800)  # Set the width to the desired value
+            except:
+                print('Error deserializing the frame')
+            data = b''  # reset the data for the next frame
+            print('Frame received')
+            break
+        else:
+            data += chunk
+
 while True:
     with st.spinner('Waiting for the next chunk...'):
-        chunk, addr = client.recvfrom(70000)
-    with Chunk: st.write(chunk)
-    if chunk == b'END':  # check for the "END" delimiter
-        try: 
-            # print the length of the data
-            frame = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
-            # show the image
-            with image_spot:
-                st.image(frame, channels="BGR", width=800)  # Set the width to the desired value
-        except:
-            print('Error deserializing the frame')
-        data = b''  # reset the data for the next frame
+        chunk, addr = client.recvfrom(900000000)
+    if chunk == b'CAM':
+        display()
     else:
-        data += chunk
+        print("Not a camera stream transmission")
 
 
